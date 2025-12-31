@@ -1,0 +1,5 @@
+api_key: "<your_tmdb_api_key>"
+port: 8080
+shows:
+  - "tt0944947"  # Game of Thrones IMDB ID
+  - "1399"       # The Office (US) TMDB ID
