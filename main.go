@@ -11,6 +11,8 @@ import (
 	"github.com/gorilla/feeds"
 )
 
+const dateFormat = "2006-01-02"
+
 func main() {
 	configFile := flag.String("config", "config.yaml", "Path to config file")
 	flag.Parse()
@@ -25,7 +27,8 @@ func main() {
 		episodes, err := fetchNewEpisodes(config)
 		if err != nil {
 			slog.Error("failed to fetch episodes", "err", err)
-			os.Exit(1)
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			return
 		}
 
 		rssFeed := generateRSS(episodes)
@@ -33,8 +36,12 @@ func main() {
 		w.Write([]byte(rssFeed))
 	})
 
+	addr := ":" + config.Port
 	slog.Info("server starting", "port", config.Port)
-	http.ListenAndServe(":"+config.Port, nil)
+	if err := http.ListenAndServe(addr, nil); err != nil {
+		slog.Error("server failed", "err", err)
+		os.Exit(1)
+	}
 }
 
 func generateRSS(episodes []TMDBEpisode) string {
@@ -45,7 +52,8 @@ func generateRSS(episodes []TMDBEpisode) string {
 		Created:     time.Now(),
 	}
 
-	for _, ep := range episodes {
+	for i := len(episodes) - 1; i >= 0; i-- {
+		ep := episodes[i]
 		airDate, _ := time.Parse("2006-01-02", ep.AirDate)
 		feed.Items = append(feed.Items, &feeds.Item{
 			Id: fmt.Sprintf("%s-%d-%d", ep.ShowID, ep.SeasonNumber, ep.EpisodeNumber),
