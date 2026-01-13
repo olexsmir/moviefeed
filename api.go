@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -54,14 +55,8 @@ func fetchNewEpisodes(config *Config) ([]TMDBEpisode, error) {
 }
 
 func getTMDBID(showID, apiKey string) (string, error) {
-	imdbIDPrefix := "tt"
-	if len(showID) > len(imdbIDPrefix) && showID[:len(imdbIDPrefix)] == imdbIDPrefix {
-		url := fmt.Sprintf(
-			"https://api.themoviedb.org/3/find/%s?api_key=%s&external_source=imdb_id",
-			showID,
-			apiKey,
-		)
-		result, err := makeRequest[tmdbFindResponse](url)
+	if strings.HasPrefix(showID, "tt") {
+		result, err := makeRequest[tmdbFindResponse](apiKey, "/find/%s&external_source=imdb_id", showID)
 		if err != nil {
 			return "", err
 		}
@@ -81,27 +76,21 @@ func fetchEpisodesForShow(showID, apiKey string) ([]TMDBEpisode, error) {
 		return nil, err
 	}
 
-	url := fmt.Sprintf("https://api.themoviedb.org/3/tv/%s?api_key=%s", tmdbID, apiKey)
-	show, err := makeRequest[tmdbShowDetails](url)
+	show, err := makeRequest[tmdbShowDetails](apiKey, "/tv/%s", tmdbID)
 	if err != nil {
 		return nil, err
 	}
 
-	seasonsToFetch := []int{1}
-	if show.NumberOfSeasons > 1 {
-		seasonsToFetch = append(seasonsToFetch, show.NumberOfSeasons)
+	if show.NumberOfSeasons == 0 {
+		return []TMDBEpisode{}, nil
 	}
 
 	var allEpisodes []TMDBEpisode
-	for _, season := range seasonsToFetch {
-		seasonURL := fmt.Sprintf("https://api.themoviedb.org/3/tv/%s/season/%d?api_key=%s",
-			tmdbID, season, apiKey)
-		seasonData, err := makeRequest[tmdbSeasonResponse](seasonURL)
-		if err != nil {
-			slog.Warn("failed to fetch season", "season", season, "show", tmdbID, "err", err)
-			continue
-		}
-
+	season := show.NumberOfSeasons
+	seasonData, err := makeRequest[tmdbSeasonResponse](apiKey, "/tv/%s/season/%d", tmdbID, season)
+	if err != nil {
+		slog.Warn("failed to fetch season", "season", season, "show", tmdbID, "err", err)
+	} else {
 		for _, ep := range seasonData.Episodes {
 			ep.ShowName = show.Name
 			ep.ShowID = tmdbID
@@ -134,10 +123,11 @@ func filterRecentEpisodes(episodes []TMDBEpisode) []TMDBEpisode {
 	return recent
 }
 
-func makeRequest[T any](url string) (*T, error) {
+func makeRequest[T any](apiKey, endpoint string, args ...any) (*T, error) {
+	url := fmt.Sprintf("https://api.themoviedb.org/3"+endpoint+"?api_key=%s", append(args, apiKey)...)
 	resp, err := http.Get(url)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch %s: %w", url, err)
+		return nil, fmt.Errorf("failed to fetch %s: %w", endpoint, err)
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
