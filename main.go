@@ -24,6 +24,7 @@ func main() {
 	}
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		slog.Info("incoming request", "method", r.Method, "url", r.URL.String())
 		episodes, err := fetchNewEpisodes(config)
 		if err != nil {
 			slog.Error("failed to fetch episodes", "err", err)
@@ -33,7 +34,7 @@ func main() {
 
 		rssFeed := generateRSS(episodes)
 		w.Header().Set("Content-Type", "application/rss+xml")
-		w.Write([]byte(rssFeed))
+		_, _ = w.Write([]byte(rssFeed))
 	})
 
 	addr := ":" + config.Port

@@ -125,6 +125,7 @@ func filterRecentEpisodes(episodes []TMDBEpisode) []TMDBEpisode {
 
 func makeRequest[T any](apiKey, endpoint string, args ...any) (*T, error) {
 	url := fmt.Sprintf("https://api.themoviedb.org/3"+endpoint+"?api_key=%s", append(args, apiKey)...)
+	slog.Info("external API request", "endpoint", fmt.Sprintf(endpoint, args...))
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch %s: %w", endpoint, err)
