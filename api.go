@@ -27,6 +27,7 @@ type TMDBEpisode struct {
 	AirDate       string `json:"air_date"`
 	EpisodeNumber int    `json:"episode_number"`
 	SeasonNumber  int    `json:"season_number"`
+	StillPath     string `json:"still_path"`
 	ShowName      string
 	ShowID        string
 }

@@ -47,7 +47,7 @@ func main() {
 func generateRSS(episodes []TMDBEpisode) string {
 	feed := &feeds.Feed{
 		Title:       "moviefeed",
-		Link:        &feeds.Link{Href: "http://localhost"},
+		Link:        &feeds.Link{},
 		Description: "Latest episodes from followed shows",
 		Created:     time.Now(),
 	}
@@ -55,7 +55,7 @@ func generateRSS(episodes []TMDBEpisode) string {
 	for i := len(episodes) - 1; i >= 0; i-- {
 		ep := episodes[i]
 		airDate, _ := time.Parse("2006-01-02", ep.AirDate)
-		feed.Items = append(feed.Items, &feeds.Item{
+		item := &feeds.Item{
 			Id: fmt.Sprintf("%s-%d-%d", ep.ShowID, ep.SeasonNumber, ep.EpisodeNumber),
 			Title: fmt.Sprintf(
 				"%s S%dE%d: %s",
@@ -69,7 +69,15 @@ func generateRSS(episodes []TMDBEpisode) string {
 			},
 			Description: ep.Overview,
 			Created:     airDate,
-		})
+		}
+		if ep.StillPath != "" {
+			item.Enclosure = &feeds.Enclosure{
+				Url:    "https://image.tmdb.org/t/p/w500" + ep.StillPath,
+				Length: "0",
+				Type:   "image/jpeg",
+			}
+		}
+		feed.Items = append(feed.Items, item)
 	}
 
 	rss, err := feed.ToRss()
