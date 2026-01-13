@@ -60,14 +60,8 @@ func getTMDBID(showID, apiKey string) (string, error) {
 			showID,
 			apiKey,
 		)
-		resp, err := http.Get(url)
+		result, err := makeRequest[tmdbFindResponse](url)
 		if err != nil {
-			return "", fmt.Errorf("failed to fetch TMDB ID: %w", err)
-		}
-		defer resp.Body.Close()
-
-		var result tmdbFindResponse
-		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 			return "", err
 		}
 
@@ -86,16 +80,9 @@ func fetchEpisodesForShow(showID, apiKey string) ([]TMDBEpisode, error) {
 		return nil, err
 	}
 
-	// Get show details
 	url := fmt.Sprintf("https://api.themoviedb.org/3/tv/%s?api_key=%s", tmdbID, apiKey)
-	resp, err := http.Get(url)
+	show, err := makeRequest[tmdbShowDetails](url)
 	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	var show tmdbShowDetails
-	if err := json.NewDecoder(resp.Body).Decode(&show); err != nil {
 		return nil, err
 	}
 
@@ -108,16 +95,9 @@ func fetchEpisodesForShow(showID, apiKey string) ([]TMDBEpisode, error) {
 	for _, season := range seasonsToFetch {
 		seasonURL := fmt.Sprintf("https://api.themoviedb.org/3/tv/%s/season/%d?api_key=%s",
 			tmdbID, season, apiKey)
-		resp, err := http.Get(seasonURL)
+		seasonData, err := makeRequest[tmdbSeasonResponse](seasonURL)
 		if err != nil {
 			slog.Warn("failed to fetch season", "season", season, "show", tmdbID, "err", err)
-			continue
-		}
-		defer resp.Body.Close()
-
-		var seasonData tmdbSeasonResponse
-		if err := json.NewDecoder(resp.Body).Decode(&seasonData); err != nil {
-			slog.Warn("failed to decode season", "season", season, "show", tmdbID, "err", err)
 			continue
 		}
 
@@ -151,4 +131,23 @@ func filterRecentEpisodes(episodes []TMDBEpisode) []TMDBEpisode {
 		}
 	}
 	return recent
+}
+
+func makeRequest[T any](url string) (*T, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch %s: %w", url, err)
+	}
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			slog.Error("failed to close response body", "err", err)
+		}
+	}()
+
+	var result T
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return &result, nil
 }
