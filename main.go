@@ -25,6 +25,12 @@ func main() {
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		slog.Info("incoming request", "method", r.Method, "url", r.URL.String())
+
+		if r.URL.Query().Get("access_key") != config.AccessKey {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
 		episodes, err := fetchNewEpisodes(config)
 		if err != nil {
 			slog.Error("failed to fetch episodes", "err", err)

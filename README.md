@@ -16,7 +16,7 @@ cp config.example.yaml config.yaml
 ./moviefeed -config config.yaml
 ```
 
-Server starts on port 8000 (configurable). Access the RSS feed at `http://localhost:8000/`.
+Server starts on port 8000 (configurable). Access the RSS feed at `http://localhost:8000/`, or `http://localhost:8000/?access_key=mySecretKey`
 
 ## Configuration
 
@@ -24,6 +24,7 @@ Create `config.yaml` (or `config.json`):
 
 ```yaml
 api_key: "your_tmdb_api_key"  # required: get from themoviedb.org/settings/api
+access_key: "sercret-key" # adds a layer of "auth", only users that know the key can access the api
 port: "8000"  # optional: defaults to "8000"
 shows:  # required
   - "tt22202452"  # IMDB ID (Pluribus)

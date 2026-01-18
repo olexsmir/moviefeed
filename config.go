@@ -11,9 +11,10 @@ import (
 )
 
 type Config struct {
-	APIKey string   `json:"api_key" yaml:"api_key"`
-	Port   string   `json:"port"    yaml:"port"`
-	Shows  []string `json:"shows"   yaml:"shows"`
+	APIKey    string   `json:"api_key" yaml:"api_key"`
+	AccessKey string   `json:"access_key" yaml:"access_key"`
+	Port      string   `json:"port" yaml:"port"`
+	Shows     []string `json:"shows" yaml:"shows"`
 }
 
 func loadConfig(path string) (*Config, error) {
