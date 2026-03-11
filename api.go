@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -56,7 +57,7 @@ func fetchNewEpisodes(config *Config) ([]TMDBEpisode, error) {
 
 func getTMDBID(showID, apiKey string) (string, error) {
 	if strings.HasPrefix(showID, "tt") {
-		result, err := makeRequest[tmdbFindResponse](apiKey, "/find/%s&external_source=imdb_id", showID)
+		result, err := makeRequest[tmdbFindResponse](apiKey, "/find/%s?external_source=imdb_id", showID)
 		if err != nil {
 			return "", err
 		}
@@ -124,9 +125,16 @@ func filterRecentEpisodes(episodes []TMDBEpisode) []TMDBEpisode {
 }
 
 func makeRequest[T any](apiKey, endpoint string, args ...any) (*T, error) {
-	url := fmt.Sprintf("https://api.themoviedb.org/3"+endpoint+"?api_key=%s", append(args, apiKey)...)
-	slog.Info("external API request", "endpoint", fmt.Sprintf(endpoint, args...))
-	resp, err := http.Get(url)
+	u, err := url.Parse(fmt.Sprintf("https://api.themoviedb.org/3"+endpoint, args...))
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse URL: %w", err)
+	}
+	q := u.Query()
+	q.Set("api_key", apiKey)
+	u.RawQuery = q.Encode()
+
+	slog.Info("external API request", "endpoint", u.String())
+	resp, err := http.Get(u.String())
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch %s: %w", endpoint, err)
 	}
